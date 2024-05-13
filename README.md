@@ -1,6 +1,3 @@
-## Welcome to GitHub Pages
+## Welcome to my GitHub Pages
+ I am a student who is interested in computer science and mathematics. Specifically, I am interested in distributed computing and non-commutative geometry.
 
-You can use the [editor on GitHub](https://github.com/Phi-Tesla/Phi-Tesla.github.io/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
-
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
-Read me.

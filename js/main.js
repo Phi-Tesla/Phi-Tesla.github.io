@@ -10,27 +10,34 @@
 // Markdown Renderer Configuration
 // ============================================================
 
-// Initialize Mermaid for graphs and diagrams
-mermaid.initialize({
-  startOnLoad: false,
-  theme: "default",
-  securityLevel: "loose",
-});
+// Initialize Mermaid for graphs and diagrams (only when the library is loaded)
+if (typeof mermaid !== "undefined") {
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: "default",
+    securityLevel: "loose",
+  });
+}
 
-// Configure Marked to use highlight.js for code blocks
-marked.setOptions({
-  highlight: function (code, lang) {
-    if (lang && hljs.getLanguage(lang)) {
-      try {
-        return hljs.highlight(code, { language: lang }).value;
-      } catch (err) {}
-    }
-    return hljs.highlightAuto(code).value;
-  },
-  langPrefix: "hljs language-",
-  breaks: true,
-  gfm: true,
-});
+// Configure Marked to use highlight.js for code blocks (only when the library is loaded)
+if (typeof marked !== "undefined") {
+  marked.setOptions({
+    highlight: function (code, lang) {
+      if (lang && typeof hljs !== "undefined" && hljs.getLanguage(lang)) {
+        try {
+          return hljs.highlight(code, { language: lang }).value;
+        } catch (err) {}
+      }
+      if (typeof hljs !== "undefined") {
+        return hljs.highlightAuto(code).value;
+      }
+      return code;
+    },
+    langPrefix: "hljs language-",
+    breaks: true,
+    gfm: true,
+  });
+}
 
 // ============================================================
 // Data Loading
@@ -229,16 +236,20 @@ async function renderArticle(posts) {
     `;
 
     // Post-process: render math formulas with KaTeX
-    renderMathInElement(container, {
-      delimiters: [
-        { left: "$$", right: "$$", display: true },
-        { left: "$", right: "$", display: false },
-      ],
-      throwOnError: false,
-    });
+    if (typeof renderMathInElement !== "undefined") {
+      renderMathInElement(container, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false },
+        ],
+        throwOnError: false,
+      });
+    }
 
     // Post-process: render Mermaid graphs inside code blocks
-    await renderMermaidGraphs(container);
+    if (typeof mermaid !== "undefined") {
+      await renderMermaidGraphs(container);
+    }
 
     // Render the Giscus comments section for this post
     loadGiscus(id, title);

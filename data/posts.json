@@ -1,0 +1,92 @@
+[
+  {
+    "id": 1,
+    "title": "Getting Started with Web Development",
+    "date": "2026-04-10",
+    "excerpt": "A beginner-friendly guide to HTML, CSS, and JavaScript — the three pillars of every website on the internet.",
+    "coverImage": "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800&h=400&fit=crop",
+    "slug": "1-getting-started-with-web-development",
+    "categories": ["Tutorials"],
+    "tags": ["html", "css", "javascript", "webdev", "beginner"]
+  },
+  {
+    "id": 2,
+    "title": "The Art of Minimalism in Design",
+    "date": "2026-04-05",
+    "excerpt": "Why less is more — exploring how removing unnecessary elements leads to clearer, more effective designs.",
+    "coverImage": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=400&fit=crop",
+    "slug": "2-the-art-of-minimalism-in-design",
+    "categories": ["Design"],
+    "tags": ["minimalism", "ux", "typography", "color-theory"]
+  },
+  {
+    "id": 3,
+    "title": "Building a Morning Routine That Works",
+    "date": "2026-03-28",
+    "excerpt": "How I designed a simple morning routine that boosted my productivity and mental clarity throughout the day.",
+    "coverImage": "https://images.unsplash.com/photo-1506152983158-b4a74a012721?w=800&h=400&fit=crop",
+    "slug": "3-building-a-morning-routine-that-works",
+    "categories": ["Lifestyle"],
+    "tags": ["productivity", "habits", "wellness"]
+  },
+  {
+    "id": 4,
+    "title": "Understanding Git Branches",
+    "date": "2026-03-15",
+    "excerpt": "A visual guide to Git branching — merge, rebase, and the workflows that teams actually use in practice.",
+    "coverImage": "https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?w=800&h=400&fit=crop",
+    "slug": "4-understanding-git-branches",
+    "categories": ["Tutorials", "Development"],
+    "tags": ["git", "version-control", "workflow", "collaboration"]
+  },
+  {
+    "id": 5,
+    "title": "My Favorite Books of 2025",
+    "date": "2026-01-02",
+    "excerpt": "A roundup of the five books that stayed with me long after the last page — spanning fiction, science, and philosophy.",
+    "coverImage": "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=800&h=400&fit=crop",
+    "slug": "5-my-favorite-books-of-2025",
+    "categories": ["Books"],
+    "tags": ["reading", "fiction", "science", "philosophy", "book-reviews"]
+  },
+  {
+    "id": 6,
+    "title": "Why I Switched to a Static Site Generator",
+    "date": "2025-11-20",
+    "excerpt": "After years of running WordPress, I moved to a static site. Here's why it was the best decision for my blog.",
+    "coverImage": "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&h=400&fit=crop",
+    "slug": "6-why-i-switched-to-a-static-site-generator",
+    "categories": ["Development"],
+    "tags": ["static-site", "hosting", "performance", "security"]
+  },
+  {
+    "id": 7,
+    "title": "CSS Container Queries Are Here",
+    "date": "2026-04-12",
+    "excerpt": "Responsive design just got a lot more powerful. Learn how container queries let components adapt to their own size, not just the viewport.",
+    "coverImage": "https://images.unsplash.com/photo-1507721999472-7471a7c967f3?w=800&h=400&fit=crop",
+    "slug": "7-css-container-queries-are-here",
+    "categories": ["Tutorials", "Design"],
+    "tags": ["css", "responsive-design", "container-queries", "components"]
+  },
+  {
+    "id": 8,
+    "title": "Designing for Accessibility from Day One",
+    "date": "2026-04-08",
+    "excerpt": "Accessibility isn't an afterthought or a checklist — it's a design philosophy that makes products better for everyone.",
+    "coverImage": "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=800&h=400&fit=crop",
+    "slug": "8-designing-for-accessibility-from-day-one",
+    "categories": ["Design"],
+    "tags": ["accessibility", "a11y", "semantic-html", "ux", "inclusive-design"]
+  },
+  {
+    "id": 9,
+    "title": "The Case for Boring Technology",
+    "date": "2026-04-01",
+    "excerpt": "New frameworks are exciting, but boring, well-understood tools ship more reliable products. Here's why I choose predictability over novelty.",
+    "coverImage": "https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=800&h=400&fit=crop",
+    "slug": "9-the-case-for-boring-technology",
+    "categories": ["Opinion"],
+    "tags": ["software-engineering", "architecture", "best-practices"]
+  }
+]

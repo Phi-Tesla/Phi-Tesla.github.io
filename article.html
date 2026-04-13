@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Article — My Blog</title>
+  <!-- Shared stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ========== Navbar ========== -->
+  <header class="site-header" id="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="site-title">My Blog</a>
+      <nav class="site-nav">
+        <a href="index.html">Home</a>
+        <a href="archive.html">Archive</a>
+        <a href="categories.html">Categories</a>
+        <a href="tags.html">Tags</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ========== Main Content ========== -->
+  <main class="container">
+
+    <!-- Article content — rendered by JavaScript based on URL ?id= parameter -->
+    <article id="article-container">
+      <!-- Full article content will be inserted here -->
+    </article>
+
+    <!-- Comments Section — powered by Giscus (GitHub Discussions) -->
+    <section class="comments-section">
+      <h2>Comments</h2>
+      <div id="giscus-container"></div>
+    </section>
+
+  </main>
+
+  <!-- ========== Footer ========== -->
+  <footer class="site-footer">
+    <div class="footer-line">&copy; 2026 My Blog</div>
+    <div class="footer-line">Powered by curiosity and caffeine</div>
+  </footer>
+
+  <!-- Scroll-to-top button -->
+  <button class="scroll-top-btn" id="scroll-top" title="Back to top" onclick="window.scrollTo({top:0})">&#9650;</button>
+
+  <!-- Markdown rendering, syntax highlighting, math, and graphs -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.0/dist/mermaid.min.js"></script>
+
+  <!-- Shared JavaScript -->
+  <script src="js/main.js"></script>
+</body>
+</html>

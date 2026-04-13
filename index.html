@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Blog</title>
+  <!-- Shared stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ========== Navbar (Fluid style: dark, sticky) ========== -->
+  <header class="site-header" id="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="site-title">My Blog</a>
+      <nav class="site-nav">
+        <a href="index.html" class="active">Home</a>
+        <a href="archive.html">Archive</a>
+        <a href="categories.html">Categories</a>
+        <a href="tags.html">Tags</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ========== Banner (Fluid style: full-width with gradient overlay) ========== -->
+  <section class="banner">
+    <div class="banner-content">
+      <h1>Welcome to My Blog</h1>
+      <span class="subtitle">Thoughts on technology, design, books, and life</span>
+    </div>
+  </section>
+
+  <!-- ========== Main Content ========== -->
+  <main class="container">
+
+    <!-- Profile Card (Fluid avatar card, overlaps banner) -->
+    <section class="profile">
+      <img class="profile__avatar" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop&crop=face" alt="Profile photo">
+      <div class="profile__info">
+        <h2>Hi, I'm Alex</h2>
+        <p>I'm a writer and developer based in the city. This blog is where I share my thoughts on technology, design, books, and the occasional life lesson.</p>
+        <p>When I'm not at a keyboard, you'll find me hiking, reading, or experimenting with new recipes.</p>
+      </div>
+    </section>
+
+    <!-- Latest Posts Section — populated by JavaScript from data/posts.json -->
+    <section style="margin-top: 2rem;">
+      <h2 class="section-title">Latest Posts</h2>
+      <div class="post-list" id="latest-posts">
+        <!-- Post cards will be inserted here by js/main.js -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========== Footer (Fluid style: dark) ========== -->
+  <footer class="site-footer">
+    <div class="footer-line">&copy; 2026 My Blog</div>
+    <div class="footer-line">Powered by curiosity and caffeine</div>
+  </footer>
+
+  <!-- Scroll-to-top button -->
+  <button class="scroll-top-btn" id="scroll-top" title="Back to top" onclick="window.scrollTo({top:0})">&#9650;</button>
+
+  <!-- Shared JavaScript for loading and rendering posts -->
+  <script src="js/main.js"></script>
+</body>
+</html>

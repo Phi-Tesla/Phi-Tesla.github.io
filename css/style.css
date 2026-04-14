@@ -125,6 +125,26 @@ a:hover {
   color: rgba(255, 255, 255, 0.85);
 }
 
+/* Language toggle button in navbar */
+.lang-toggle {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: var(--font-body);
+}
+
+.lang-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
 /* Navigation links */
 .site-nav {
   display: flex;

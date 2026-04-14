@@ -3,8 +3,130 @@
  *
  * Handles loading posts from data/posts.json (metadata) and
  * individual Markdown files from posts/ (full content).
+ * Supports bilingual display (English / Chinese).
  * Comments are managed via Giscus (GitHub Discussions).
  */
+
+// ============================================================
+// i18n Engine
+// ============================================================
+
+const i18n = {
+  currentLang: "en",
+  translations: null,
+};
+
+/**
+ * Detects the user's preferred language from localStorage or browser,
+ * and initializes the i18n system.
+ */
+async function initI18n() {
+  const saved = localStorage.getItem("blog-lang");
+  if (saved) {
+    i18n.currentLang = saved;
+  } else {
+    const browserLang = navigator.language || navigator.languages?.[0] || "";
+    if (browserLang.startsWith("zh")) {
+      i18n.currentLang = "cn";
+    }
+  }
+
+  const resp = await fetch("data/i18n.json");
+  if (!resp.ok) throw new Error("Failed to load translations");
+  i18n.translations = await resp.json();
+}
+
+/**
+ * Looks up a translation key in the current language.
+ * Falls back to English if the key is missing.
+ */
+function t(key) {
+  return (
+    (i18n.translations?.[i18n.currentLang]?.[key]) ||
+    (i18n.translations?.en?.[key]) ||
+    key
+  );
+}
+
+/**
+ * Applies translations to all elements with data-i18n attributes.
+ */
+function applyTranslations() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    el.textContent = t(key);
+  });
+  // Update page <title> if it has a data-i18n attribute
+  const titleEl = document.querySelector("title[data-i18n]");
+  if (titleEl) {
+    titleEl.textContent = t(titleEl.getAttribute("data-i18n"));
+  }
+}
+
+/**
+ * Switches the current language and re-renders the page.
+ */
+async function setLang(lang) {
+  i18n.currentLang = lang;
+  localStorage.setItem("blog-lang", lang);
+  updateLangToggleText();
+  // Re-render the current page with new language
+  try {
+    const posts = await loadPosts();
+    const mainPostsContainer = document.getElementById("latest-posts");
+    const archiveContainer = document.getElementById("archive-list");
+    const articleContainer = document.getElementById("article-container");
+    const categoriesContainer = document.getElementById("categories-list");
+    const tagsContainer = document.getElementById("tags-cloud");
+
+    if (mainPostsContainer) {
+      renderPostList(mainPostsContainer, posts.slice(0, 3));
+    }
+    if (archiveContainer) {
+      renderArchive(archiveContainer, posts);
+    }
+    if (articleContainer) {
+      renderArticle(posts);
+    }
+    if (categoriesContainer) {
+      renderCategories(posts);
+    }
+    if (tagsContainer) {
+      renderTags(posts);
+    }
+  } catch (e) {
+    console.error("Error re-rendering after lang switch:", e);
+  }
+  applyTranslations();
+}
+
+/**
+ * Creates the language toggle button and injects it into the navbar.
+ */
+function createLangToggle() {
+  const nav = document.querySelector(".site-nav");
+  if (!nav) return;
+
+  const btn = document.createElement("button");
+  btn.className = "lang-toggle";
+  btn.id = "lang-toggle";
+  btn.addEventListener("click", () => {
+    const newLang = i18n.currentLang === "en" ? "cn" : "en";
+    setLang(newLang);
+  });
+  nav.appendChild(btn);
+  updateLangToggleText();
+}
+
+/**
+ * Updates the language toggle button text.
+ */
+function updateLangToggleText() {
+  const btn = document.getElementById("lang-toggle");
+  if (btn) {
+    btn.textContent = i18n.currentLang === "en" ? "中文" : "EN";
+  }
+}
 
 // ============================================================
 // Markdown Renderer Configuration
@@ -45,9 +167,8 @@ if (typeof marked !== "undefined") {
 
 /**
  * Fetches all blog post metadata from the index file.
- * This file contains only front-matter (title, date, excerpt,
- * coverImage, slug) — not the full article content.
- * Returns a promise that resolves to an array of post objects.
+ * Returns a promise that resolves to an array of post objects
+ * with language-aware fields (title, excerpt, categories, tags).
  */
 async function loadPosts() {
   const response = await fetch("data/posts.json");
@@ -60,8 +181,21 @@ async function loadPosts() {
 }
 
 /**
+ * Resolves a post field to the correct language variant.
+ * Falls back to the English field if the CN variant is missing.
+ */
+function postField(post, field, fallback) {
+  const cnField = field + "Cn";
+  if (i18n.currentLang === "cn" && post[cnField]) {
+    return post[cnField];
+  }
+  return post[field] || fallback;
+}
+
+/**
  * Fetches a single post's Markdown file and parses it into
  * front-matter metadata and rendered HTML content.
+ * Bilingual .md files use `<!-- cn -->` as the separator.
  *
  * @param {string} slug - The post slug (e.g. "1-getting-started-with-web-development")
  * @returns {Promise<object>} { meta: frontmatter object, html: rendered HTML string }
@@ -73,22 +207,67 @@ async function loadPostMarkdown(slug) {
   }
   const raw = await response.text();
   const { meta, body } = parseFrontmatter(raw);
+
+  // Split bilingual content if <!-- cn --> marker exists
+  let content = body;
+  if (body.includes("<!-- cn -->")) {
+    const parts = body.split("<!-- cn -->");
+    if (i18n.currentLang === "cn" && parts.length > 1) {
+      content = parts[1];
+    } else {
+      content = parts[0];
+    }
+  }
+
+  // Protect mermaid code blocks from Marked parser
+  const mermaidBlocks = [];
+  content = content.replace(/```mermaid\s*\n([\s\S]*?)```/g, (match, code) => {
+    const placeholder = `%%MERMAID_BLOCK_${mermaidBlocks.length}%%`;
+    mermaidBlocks.push(placeholder, code);
+    return placeholder;
+  });
+
+  // Protect math blocks ($$...$$ and $...$) from Marked parser
+  const mathBlocks = [];
+  content = content.replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
+    const placeholder = `%%MATH_BLOCK_${mathBlocks.length}%%`;
+    mathBlocks.push({ placeholder, math, display: true });
+    return placeholder;
+  });
+  content = content.replace(/\$([^\$\n]+?)\$/g, (match, math) => {
+    const placeholder = `%%MATH_BLOCK_${mathBlocks.length}%%`;
+    mathBlocks.push({ placeholder, math, display: false });
+    return placeholder;
+  });
+
   // Convert Markdown to HTML
-  const html = marked.parse(body);
+  let html = marked.parse(content);
+
+  // Restore mermaid blocks as <div class="mermaid">
+  for (let i = 0; i < mermaidBlocks.length; i += 2) {
+    const placeholder = mermaidBlocks[i];
+    const code = mermaidBlocks[i + 1];
+    const escaped = code
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    html = html.replace(placeholder, `<div class="mermaid">${escaped}</div>`);
+  }
+
+  // Restore math blocks into the HTML
+  mathBlocks.forEach(({ placeholder, math, display }) => {
+    const rendered = katex.renderToString(math, {
+      displayMode: display,
+      throwOnError: false,
+    });
+    html = html.replace(placeholder, rendered);
+  });
+
   return { meta, html };
 }
 
 /**
  * Parses YAML-like frontmatter from the top of a Markdown file.
- * Expected format:
- *   ---
- *   key: value
- *   key: "quoted value"
- *   ---
- *   body content...
- *
- * @param {string} text - Raw Markdown file content
- * @returns {{ meta: object, body: string }}
  */
 function parseFrontmatter(text) {
   const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
@@ -115,11 +294,12 @@ function parseFrontmatter(text) {
 // ============================================================
 
 /**
- * Formats an ISO date string (e.g. "2026-04-10") into a
- * human-readable string like "April 10, 2026".
+ * Formats an ISO date string into a human-readable string.
+ * Uses Chinese locale when current language is Chinese.
  */
 function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString("en-US", {
+  const locale = i18n.currentLang === "cn" ? "zh-CN" : "en-US";
+  return new Date(dateStr).toLocaleDateString(locale, {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -127,17 +307,18 @@ function formatDate(dateStr) {
 }
 
 /**
- * Extracts the full month name from a date string, e.g. "April 2026".
+ * Extracts the full month name from a date string.
  */
 function formatMonth(dateStr) {
-  return new Date(dateStr).toLocaleDateString("en-US", {
+  const locale = i18n.currentLang === "cn" ? "zh-CN" : "en-US";
+  return new Date(dateStr).toLocaleDateString(locale, {
     year: "numeric",
     month: "long",
   });
 }
 
 /**
- * Extracts just the year from a date string, e.g. "2026".
+ * Extracts just the year from a date string.
  */
 function getYear(dateStr) {
   return new Date(dateStr).getFullYear().toString();
@@ -148,32 +329,29 @@ function getYear(dateStr) {
 // ============================================================
 
 /**
- * Renders a list of post cards into the given container element.
- * Each card shows the cover image, date, title, excerpt, and a
- * "Read more" link pointing to the article page.
- *
- * @param {HTMLElement} container - The DOM element to render into
- * @param {Array} posts - Array of post objects to display
+ * Renders a list of post cards. Uses language-aware post fields.
  */
 function renderPostList(container, posts) {
   container.innerHTML = "";
 
   posts.forEach((post) => {
-    // Create the card wrapper
     const card = document.createElement("article");
     card.className = "post-card";
 
+    const title = postField(post, "title", "");
+    const excerpt = postField(post, "excerpt", "");
+
     card.innerHTML = `
       <div class="post-card__image-wrapper">
-        <img class="post-card__image" src="${post.coverImage}" alt="${post.title}" loading="lazy">
+        <img class="post-card__image" src="${post.coverImage}" alt="${title}" loading="lazy">
       </div>
       <div class="post-card__body">
         <div class="post-card__date">${formatDate(post.date)}</div>
         <h2 class="post-card__title">
-          <a href="article.html?id=${post.id}">${post.title}</a>
+          <a href="article.html?id=${post.id}">${title}</a>
         </h2>
-        <p class="post-card__excerpt">${post.excerpt}</p>
-        <a class="post-card__link" href="article.html?id=${post.id}">Read More</a>
+        <p class="post-card__excerpt">${excerpt}</p>
+        <a class="post-card__link" href="article.html?id=${post.id}">${t("readMore")}</a>
       </div>
     `;
 
@@ -185,48 +363,36 @@ function renderPostList(container, posts) {
 // Page: Article (article.html) — Render single post
 // ============================================================
 
-/**
- * Finds a post by its ID, fetches its Markdown file, parses
- * the front-matter, renders the content to HTML, and
- * post-processes for math formulas (KaTeX) and graphs (Mermaid).
- * If no matching post is found, shows a "not found" message.
- *
- * @param {Array} posts - Array of all post metadata objects
- */
 async function renderArticle(posts) {
-  // Read the post ID from the URL query string (?id=1)
   const params = new URLSearchParams(window.location.search);
   const id = parseInt(params.get("id"), 10);
 
-  // Find the matching post metadata
   const post = posts.find((p) => p.id === id);
 
   if (!post) {
     document.getElementById("article-container").innerHTML = `
       <div class="not-found">
-        <a class="back-link" href="index.html">Back to home</a>
-        <h1>Post Not Found</h1>
-        <p>The article you're looking for doesn't exist.</p>
+        <a class="back-link" href="index.html">${t("backLink")}</a>
+        <h1>${t("postNotFound")}</h1>
+        <p>${t("articleNotFoundDesc")}</p>
       </div>
     `;
     return;
   }
 
   try {
-    // Fetch and parse the Markdown file
     const { meta, html } = await loadPostMarkdown(post.slug);
 
-    // Use frontmatter from the .md file (falls back to index metadata)
-    const title = meta.title || post.title;
+    const title = postField(post, "title", meta.title || post.title);
     const date = meta.date || post.date;
 
-    // Update the page title shown in the browser tab
-    document.title = `${title} — My Blog`;
+    // Update page title
+    const siteTitle = t("siteTitle");
+    document.title = `${title} — ${siteTitle}`;
 
-    // Render the article content
     const container = document.getElementById("article-container");
     container.innerHTML = `
-      <a class="back-link" href="index.html">Back to home</a>
+      <a class="back-link" href="index.html">${t("backLink")}</a>
       <header class="article-header">
         <h1>${title}</h1>
         <div class="article-header__meta">${formatDate(date)}</div>
@@ -235,56 +401,31 @@ async function renderArticle(posts) {
       <div class="article-content">${html}</div>
     `;
 
-    // Post-process: render math formulas with KaTeX
-    if (typeof renderMathInElement !== "undefined") {
-      renderMathInElement(container, {
-        delimiters: [
-          { left: "$$", right: "$$", display: true },
-          { left: "$", right: "$", display: false },
-        ],
-        throwOnError: false,
-      });
-    }
-
-    // Post-process: render Mermaid graphs inside code blocks
+    // Post-process: Mermaid
     if (typeof mermaid !== "undefined") {
       await renderMermaidGraphs(container);
     }
 
-    // Render the Giscus comments section for this post
+    // Comments
     loadGiscus(id, title);
   } catch (error) {
     console.error("Error rendering article:", error);
     document.getElementById("article-container").innerHTML = `
       <div class="not-found">
-        <a class="back-link" href="index.html">Back to home</a>
-        <h1>Error Loading Article</h1>
+        <a class="back-link" href="index.html">${t("backLink")}</a>
+        <h1>${t("errorLoadingTitle")}</h1>
         <p>${error.message}</p>
       </div>
     `;
   }
 }
 
-/**
- * Finds fenced code blocks with the "mermaid" language tag
- * and renders them as interactive diagrams.
- *
- * @param {HTMLElement} container - The article container element
- */
 async function renderMermaidGraphs(container) {
-  const codeBlocks = container.querySelectorAll("pre code.language-mermaid");
-  if (codeBlocks.length === 0) return;
-
-  for (const block of codeBlocks) {
-    const graphDefinition = block.textContent;
-    const wrapper = document.createElement("div");
-    wrapper.className = "mermaid";
-    wrapper.textContent = graphDefinition;
-    block.parentElement.replaceWith(wrapper);
-  }
+  const mermaidDivs = container.querySelectorAll(".mermaid");
+  if (mermaidDivs.length === 0) return;
 
   try {
-    await mermaid.run({ nodes: container.querySelectorAll(".mermaid") });
+    await mermaid.run({ nodes: mermaidDivs });
   } catch (err) {
     console.warn("Mermaid rendering failed:", err);
   }
@@ -294,17 +435,9 @@ async function renderMermaidGraphs(container) {
 // Page: Archive (archive.html) — Render chronological list
 // ============================================================
 
-/**
- * Renders all posts grouped by year and then by month,
- * with the newest posts appearing first.
- *
- * @param {HTMLElement} container - The DOM element to render into
- * @param {Array} posts - Array of all post objects (should be pre-sorted newest first)
- */
 function renderArchive(container, posts) {
   container.innerHTML = "";
 
-  // Group posts by year -> month
   const grouped = {};
   posts.forEach((post) => {
     const year = getYear(post.date);
@@ -319,7 +452,6 @@ function renderArchive(container, posts) {
     grouped[year][month].push(post);
   });
 
-  // Render each year group
   Object.keys(grouped).forEach((year) => {
     const yearDiv = document.createElement("div");
     yearDiv.className = "archive-year";
@@ -329,7 +461,6 @@ function renderArchive(container, posts) {
     yearHeading.textContent = year;
     yearDiv.appendChild(yearHeading);
 
-    // Render each month within this year
     Object.keys(grouped[year]).forEach((month) => {
       const monthDiv = document.createElement("div");
       monthDiv.className = "archive-month";
@@ -339,14 +470,14 @@ function renderArchive(container, posts) {
       monthHeading.textContent = month;
       monthDiv.appendChild(monthHeading);
 
-      // Render each post entry within this month
       grouped[year][month].forEach((post) => {
         const entry = document.createElement("div");
         entry.className = "archive-entry";
+        const title = postField(post, "title", "");
         entry.innerHTML = `
           <div class="archive-entry__date">${formatDate(post.date)}</div>
           <div class="archive-entry__title">
-            <a href="article.html?id=${post.id}">${post.title}</a>
+            <a href="article.html?id=${post.id}">${title}</a>
           </div>
         `;
         monthDiv.appendChild(entry);
@@ -363,27 +494,19 @@ function renderArchive(container, posts) {
 // Page: Categories (categories.html) — Group posts by category
 // ============================================================
 
-/**
- * Renders all categories with their associated post titles listed under each.
- * Categories are sorted by post count (most posts first), then alphabetically.
- *
- * @param {Array} posts - Array of all post metadata objects
- */
 function renderCategories(posts) {
   const container = document.getElementById("categories-list");
   if (!container) return;
 
-  // Group posts by category
   const grouped = {};
   posts.forEach((post) => {
-    const cats = post.categories || ["Uncategorized"];
+    const cats = postField(post, "categories", ["Uncategorized"]);
     cats.forEach((cat) => {
       if (!grouped[cat]) grouped[cat] = [];
       grouped[cat].push(post);
     });
   });
 
-  // Sort categories: by post count descending, then alphabetically
   const sorted = Object.entries(grouped).sort((a, b) => {
     if (b[1].length !== a[1].length) return b[1].length - a[1].length;
     return a[0].localeCompare(b[0]);
@@ -398,10 +521,10 @@ function renderCategories(posts) {
       <ul class="category-card__posts">
         ${catPosts
           .sort((a, b) => new Date(b.date) - new Date(a.date))
-          .map(
-            (post) =>
-              `<li><a href="article.html?id=${post.id}">${post.title}</a> <span class="post-date">${formatDate(post.date)}</span></li>`
-          )
+          .map((post) => {
+            const title = postField(post, "title", "");
+            return `<li><a href="article.html?id=${post.id}">${title}</a> <span class="post-date">${formatDate(post.date)}</span></li>`;
+          })
           .join("")}
       </ul>
     `;
@@ -413,20 +536,13 @@ function renderCategories(posts) {
 // Page: Tags (tags.html) — Tag cloud with post counts
 // ============================================================
 
-/**
- * Renders a tag cloud where each tag's font size reflects
- * how many posts use it. Clicking a tag filters to show matching posts.
- *
- * @param {Array} posts - Array of all post metadata objects
- */
 function renderTags(posts) {
   const container = document.getElementById("tags-cloud");
   if (!container) return;
 
-  // Count posts per tag
   const counts = {};
   posts.forEach((post) => {
-    (post.tags || []).forEach((tag) => {
+    (postField(post, "tags", [])).forEach((tag) => {
       counts[tag] = (counts[tag] || 0) + 1;
     });
   });
@@ -452,7 +568,7 @@ function renderTags(posts) {
     a.style.fontSize = `${size}rem`;
     a.style.setProperty("--tag-weight", Math.round((count / maxCount) * 500 + 400));
     a.textContent = tag;
-    a.title = `${count} post${count > 1 ? "s" : ""}`;
+    a.title = `${count} ${t("postsCount")}`;
     cloud.appendChild(a);
   });
 
@@ -466,47 +582,43 @@ function renderTags(posts) {
   }
 }
 
-/**
- * Shows a filtered list of posts that have a specific tag.
- * Inserted below the tag cloud.
- *
- * @param {string} tag - The tag to filter by
- * @param {Array} posts - Array of all post metadata objects
- */
 function renderFilteredTagPosts(tag, posts) {
   const container = document.getElementById("tags-cloud");
   if (!container) return;
 
   const filtered = posts
-    .filter((post) => (post.tags || []).includes(tag))
+    .filter((post) => (postField(post, "tags", [])).includes(tag))
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const section = document.createElement("div");
   section.className = "tag-filtered-results";
-  section.innerHTML = `
-    <h3 class="tag-filtered__heading">Posts tagged "${tag}" (${filtered.length})</h3>
-    <div class="post-list">
-      ${filtered
-        .map(
-          (post) => `
+
+  const postsListHtml = filtered
+    .map((post) => {
+      const title = postField(post, "title", "");
+      const excerpt = postField(post, "excerpt", "");
+      return `
         <article class="post-card">
           <div class="post-card__image-wrapper">
-            <img class="post-card__image" src="${post.coverImage}" alt="${post.title}" loading="lazy">
+            <img class="post-card__image" src="${post.coverImage}" alt="${title}" loading="lazy">
           </div>
           <div class="post-card__body">
             <div class="post-card__date">${formatDate(post.date)}</div>
             <h2 class="post-card__title">
-              <a href="article.html?id=${post.id}">${post.title}</a>
+              <a href="article.html?id=${post.id}">${title}</a>
             </h2>
-            <p class="post-card__excerpt">${post.excerpt}</p>
-            <a class="post-card__link" href="article.html?id=${post.id}">Read More</a>
+            <p class="post-card__excerpt">${excerpt}</p>
+            <a class="post-card__link" href="article.html?id=${post.id}">${t("readMore")}</a>
           </div>
         </article>
-      `
-        )
-        .join("")}
-    </div>
-    <a class="back-link" href="tags.html">Show all tags</a>
+      `;
+    })
+    .join("");
+
+  section.innerHTML = `
+    <h3 class="tag-filtered__heading">${t("postsTagged")} "${tag}" (${filtered.length})</h3>
+    <div class="post-list">${postsListHtml}</div>
+    <a class="back-link" href="tags.html">${t("showAllTags")}</a>
   `;
   container.appendChild(section);
 }
@@ -515,30 +627,15 @@ function renderFilteredTagPosts(tag, posts) {
 // Comments System — Giscus (GitHub Discussions)
 // ============================================================
 
-/**
- * Configuration — replace these values with your own from https://giscus.app
- *
- * 1. Make your repo public and enable Discussions
- * 2. Go to https://giscus.app and fill in your repo to get the data-* values
- * 3. Paste them below
- */
 const GISCUS_CONFIG = {
-  repo: "Phi-Tesla/Phi-Tesla.github.io", // e.g. "octocat/my-blog"
+  repo: "Phi-Tesla/Phi-Tesla.github.io",
   repoId: "MDEwOlJlcG9zaXRvcnkxODA5NzMyNTk=",
-  category: "Comments", // Discussion category name
+  category: "Comments",
   categoryId: "DIC_kwDOCsluy84C6utk",
-  theme: "light", // or "dark", "transparent_dark", etc.
+  theme: "light",
   lang: "en",
 };
 
-/**
- * Dynamically loads the Giscus script for a specific blog post.
- * Each post gets its own discussion thread in GitHub Discussions,
- * matched by the post title.
- *
- * @param {number|string} postId - Unique ID of the blog post
- * @param {string} postTitle - Title of the blog post (used as discussion title)
- */
 function loadGiscus(postId, postTitle) {
   const container = document.getElementById("giscus-container");
   if (!container) return;
@@ -549,9 +646,9 @@ function loadGiscus(postId, postTitle) {
   script.setAttribute("data-repo-id", GISCUS_CONFIG.repoId);
   script.setAttribute("data-category", GISCUS_CONFIG.category);
   script.setAttribute("data-category-id", GISCUS_CONFIG.categoryId);
-  script.setAttribute("data-mapping", "title"); // match discussions by page title
-  script.setAttribute("data-term", String(postTitle)); // use post title as the key
-  script.setAttribute("data-strict", "1"); // strict title matching
+  script.setAttribute("data-mapping", "title");
+  script.setAttribute("data-term", String(postTitle));
+  script.setAttribute("data-strict", "1");
   script.setAttribute("data-reactions-enabled", "0");
   script.setAttribute("data-emit-metadata", "0");
   script.setAttribute("data-input-position", "top");
@@ -567,11 +664,6 @@ function loadGiscus(postId, postTitle) {
 // UI Enhancements (Fluid theme style)
 // ============================================================
 
-/**
- * Sets up the navbar transparency-on-scroll effect.
- * When the page is scrolled down, the navbar becomes semi-transparent
- * with a backdrop blur, mimicking the Fluid theme behavior.
- */
 function setupNavbarScroll() {
   const header = document.getElementById("site-header");
   if (!header) return;
@@ -585,10 +677,6 @@ function setupNavbarScroll() {
   });
 }
 
-/**
- * Sets up the scroll-to-top button visibility.
- * Shows the button when the user scrolls down the page.
- */
 function setupScrollTopButton() {
   const btn = document.getElementById("scroll-top");
   if (!btn) return;
@@ -608,9 +696,17 @@ function setupScrollTopButton() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
+    // Initialize i18n first
+    await initI18n();
+
+    // Create language toggle in navbar
+    createLangToggle();
+
+    // Apply translations to static HTML elements
+    applyTranslations();
+
     const posts = await loadPosts();
 
-    // Determine which page we're on and render accordingly
     const mainPostsContainer = document.getElementById("latest-posts");
     const archiveContainer = document.getElementById("archive-list");
     const articleContainer = document.getElementById("article-container");
@@ -618,31 +714,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     const tagsContainer = document.getElementById("tags-cloud");
 
     if (mainPostsContainer) {
-      // We're on the main page — show the 3 most recent posts
       renderPostList(mainPostsContainer, posts.slice(0, 3));
     }
 
     if (archiveContainer) {
-      // We're on the archive page — show all posts grouped by date
       renderArchive(archiveContainer, posts);
     }
 
     if (articleContainer) {
-      // We're on the article page — render the single post
       renderArticle(posts);
     }
 
     if (categoriesContainer) {
-      // We're on the categories page
       renderCategories(posts);
     }
 
     if (tagsContainer) {
-      // We're on the tags page
       renderTags(posts);
     }
   } catch (error) {
-    // If loading posts fails (e.g., file not found), show an error
     console.error("Error loading blog posts:", error);
     const container =
       document.getElementById("latest-posts") ||
@@ -651,11 +741,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("categories-list") ||
       document.getElementById("tags-cloud");
     if (container) {
-      container.innerHTML = `<p style="color: red;">Error loading blog posts. Make sure you are serving the site from a web server (not opening the file directly), as fetch() requires HTTP.</p>`;
+      container.innerHTML = `<p style="color: red;">${t("errorLoadingPosts")}</p>`;
     }
   }
 
-  // Initialize Fluid theme UI effects
   setupNavbarScroll();
   setupScrollTopButton();
 });

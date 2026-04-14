@@ -185,7 +185,7 @@ a:hover {
   height: 360px;
   overflow: hidden;
   /* Background image with parallax-like fixed attachment */
-  background: url("https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1400&h=500&fit=crop") center center / cover no-repeat;
+  background: url("photo/1432916-stars-m-c-escher-r-wallpaper.png") center center / cover no-repeat;
   background-attachment: fixed;
 }
 

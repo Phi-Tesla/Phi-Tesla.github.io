@@ -19,14 +19,14 @@ For other situations it's the same. Because they must differ from at least a num
 
 Hopefully this provement should work but as I said before, this requires some theoreoms to support this, like there are infinitely many non-repeating combinations of numbers.So it's just a thought rather than a provement.
 
-  ```python
-  def factorial(n):
-      if n <= 1:
-          return 1
-      return n * factorial(n - 1)
+```python
+def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
 
-  print(factorial(5))
-  ```
+print(factorial(5))
+```
 
 <!-- cn -->
 

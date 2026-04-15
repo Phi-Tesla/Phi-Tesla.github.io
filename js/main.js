@@ -152,12 +152,39 @@ if (typeof marked !== "undefined") {
 
 /**
  * Apply syntax highlighting to all code blocks in a container
- * using highlight.js auto-detection and language hints.
+ * using highlight.js.
  */
 function applyHighlighting(container) {
   if (typeof hljs === "undefined") return;
-  container.querySelectorAll("pre code").forEach((block) => {
-    hljs.highlightElement(block);
+  // Use highlightAll which processes all pre code blocks in the container
+  // and adds proper hljs classes + span wrapping for tokens
+  const blocks = container.querySelectorAll("pre code");
+  blocks.forEach((block) => {
+    // Detect language from class or auto-detect
+    let language;
+    const langClass = block.className.match(/language-(\w+)/);
+    if (langClass && hljs.getLanguage(langClass[1])) {
+      language = langClass[1];
+    }
+    if (language) {
+      try {
+        const result = hljs.highlight(block.textContent, { language });
+        block.innerHTML = result.value;
+        block.classList.add("hljs");
+        block.classList.add(`language-${language}`);
+      } catch (e) {
+        console.warn("Highlight error:", e);
+      }
+    } else {
+      // Auto-detect
+      try {
+        const result = hljs.highlightAuto(block.textContent);
+        block.innerHTML = result.value;
+        block.classList.add("hljs");
+      } catch (e) {
+        console.warn("Highlight auto-detect error:", e);
+      }
+    }
   });
 }
 

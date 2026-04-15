@@ -109,8 +109,43 @@ a:hover {
   padding: 0 var(--spacing-md);
   display: flex;
   align-items: center;
-  justify-content: space-between;
   height: 56px;
+}
+
+/* Hamburger menu button (hidden on desktop) */
+.menu-toggle {
+  display: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.4rem;
+  order: 2;
+}
+
+.menu-toggle__line {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--navbar-text);
+  border-radius: 1px;
+  transition: all var(--transition-fast);
+}
+
+.menu-toggle__line + .menu-toggle__line {
+  margin-top: 4px;
+}
+
+/* Animate hamburger to X when open */
+.menu-toggle[aria-expanded="true"] .menu-toggle__line:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.menu-toggle[aria-expanded="true"] .menu-toggle__line:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-toggle[aria-expanded="true"] .menu-toggle__line:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
 }
 
 /* Blog title in navbar */
@@ -137,6 +172,8 @@ a:hover {
   cursor: pointer;
   transition: all var(--transition-fast);
   font-family: var(--font-body);
+  order: 3;
+  margin-left: var(--spacing-sm);
 }
 
 .lang-toggle:hover {
@@ -150,6 +187,8 @@ a:hover {
   display: flex;
   gap: var(--spacing-md);
   align-items: center;
+  margin-left: auto;
+  order: 1;
 }
 
 .site-nav a {
@@ -830,6 +869,44 @@ a:hover {
     width: 36px;
     height: 36px;
   }
+
+  /* Mobile navbar: hamburger menu */
+  .menu-toggle {
+    display: block;
+  }
+
+  .site-nav {
+    display: none;
+    position: absolute;
+    top: 56px;
+    left: 0;
+    right: 0;
+    background: var(--navbar-bg);
+    flex-direction: column;
+    gap: 0;
+    padding: var(--spacing-sm) 0;
+    margin-left: 0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  .site-nav.open {
+    display: flex;
+  }
+
+  .site-nav a {
+    padding: 0.75rem var(--spacing-md);
+    font-size: 1rem;
+    width: 100%;
+    text-align: center;
+  }
+
+  .site-nav a:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .site-nav a.active::after {
+    bottom: 0;
+  }
 }
 
 @media (max-width: 480px) {
@@ -842,11 +919,7 @@ a:hover {
   }
 
   .site-nav {
-    gap: var(--spacing-sm);
-  }
-
-  .site-nav a {
-    font-size: 0.85rem;
+    top: 48px;
   }
 
   .banner {

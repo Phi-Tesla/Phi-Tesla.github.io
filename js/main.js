@@ -104,8 +104,8 @@ async function setLang(lang) {
  * Creates the language toggle button and injects it into the navbar.
  */
 function createLangToggle() {
-  const nav = document.querySelector(".site-nav");
-  if (!nav) return;
+  const header = document.querySelector(".header-inner");
+  if (!header) return;
 
   const btn = document.createElement("button");
   btn.className = "lang-toggle";
@@ -114,7 +114,7 @@ function createLangToggle() {
     const newLang = i18n.currentLang === "en" ? "cn" : "en";
     setLang(newLang);
   });
-  nav.appendChild(btn);
+  header.appendChild(btn);
   updateLangToggleText();
 }
 
@@ -677,6 +677,33 @@ function setupNavbarScroll() {
   });
 }
 
+function setupMobileMenu() {
+  const toggle = document.getElementById("menu-toggle");
+  const nav = document.getElementById("site-nav");
+  if (!toggle || !nav) return;
+
+  toggle.addEventListener("click", () => {
+    const isOpen = nav.classList.toggle("open");
+    toggle.setAttribute("aria-expanded", String(isOpen));
+  });
+
+  // Close menu when a nav link is clicked
+  nav.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => {
+      nav.classList.remove("open");
+      toggle.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  // Close menu when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!nav.contains(e.target) && !toggle.contains(e.target)) {
+      nav.classList.remove("open");
+      toggle.setAttribute("aria-expanded", "false");
+    }
+  });
+}
+
 function setupScrollTopButton() {
   const btn = document.getElementById("scroll-top");
   if (!btn) return;
@@ -746,5 +773,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   setupNavbarScroll();
+  setupMobileMenu();
   setupScrollTopButton();
 });

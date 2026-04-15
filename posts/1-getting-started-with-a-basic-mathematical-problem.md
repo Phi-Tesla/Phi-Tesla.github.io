@@ -19,10 +19,6 @@ For other situations it's the same. Because they must differ from at least a num
 
 Hopefully this provement should work but as I said before, this requires some theoreoms to support this, like there are infinitely many non-repeating combinations of numbers.So it's just a thought rather than a provement.
 
-```python
-def a():
-    print("Hello World!")
-```
 
 <!-- cn -->
 

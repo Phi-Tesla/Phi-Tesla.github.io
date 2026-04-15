@@ -141,21 +141,23 @@ if (typeof mermaid !== "undefined") {
   });
 }
 
-// Configure Marked to use highlight.js for code blocks (only when the library is loaded)
+// Configure Marked (only when the library is loaded)
 if (typeof marked !== "undefined") {
   marked.setOptions({
-    highlight: function (code, lang) {
-      if (lang && typeof hljs !== "undefined" && hljs.getLanguage(lang)) {
-        try {
-          return hljs.highlight(code, { language: lang }).value;
-        } catch (err) {}
-      }
-      // Return raw code — highlightElement will handle tagged and untagged blocks after DOM insertion
-      return code;
-    },
     langPrefix: "hljs language-",
     breaks: true,
     gfm: true,
+  });
+}
+
+/**
+ * Apply syntax highlighting to all code blocks in a container
+ * using highlight.js auto-detection and language hints.
+ */
+function applyHighlighting(container) {
+  if (typeof hljs === "undefined") return;
+  container.querySelectorAll("pre code").forEach((block) => {
+    hljs.highlightElement(block);
   });
 }
 
@@ -404,14 +406,8 @@ async function renderArticle(posts) {
       await renderMermaidGraphs(container);
     }
 
-    // Post-process: Syntax highlighting for all code blocks
-    if (typeof hljs !== "undefined") {
-      container.querySelectorAll("pre code").forEach((block) => {
-        if (!block.classList.contains("hljs")) {
-          hljs.highlightElement(block);
-        }
-      });
-    }
+    // Post-process: Syntax highlighting
+    applyHighlighting(container);
 
     // Comments
     loadGiscus(id, title);

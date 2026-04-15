@@ -19,6 +19,11 @@ For other situations it's the same. Because they must differ from at least a num
 
 Hopefully this provement should work but as I said before, this requires some theoreoms to support this, like there are infinitely many non-repeating combinations of numbers.So it's just a thought rather than a provement.
 
+```python
+def a():
+    print("Hello World!")
+```
+
 <!-- cn -->
 
 我在读科朗的《微积分与数学分析引论》时碰到了一个十分有趣的问题，就是怎么证明任意两个有理数中都有至少一个无理数，然后也即有无穷多个无理数。鉴于我非数学专业本科生，读这书只是爱好，所以我更多的是从思路上讨论这个问题。

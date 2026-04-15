@@ -150,9 +150,7 @@ if (typeof marked !== "undefined") {
           return hljs.highlight(code, { language: lang }).value;
         } catch (err) {}
       }
-      if (typeof hljs !== "undefined") {
-        return hljs.highlightAuto(code).value;
-      }
+      // Return raw code — highlightElement will handle tagged and untagged blocks after DOM insertion
       return code;
     },
     langPrefix: "hljs language-",
@@ -404,6 +402,15 @@ async function renderArticle(posts) {
     // Post-process: Mermaid
     if (typeof mermaid !== "undefined") {
       await renderMermaidGraphs(container);
+    }
+
+    // Post-process: Syntax highlighting for all code blocks
+    if (typeof hljs !== "undefined") {
+      container.querySelectorAll("pre code").forEach((block) => {
+        if (!block.classList.contains("hljs")) {
+          hljs.highlightElement(block);
+        }
+      });
     }
 
     // Comments

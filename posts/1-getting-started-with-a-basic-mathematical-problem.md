@@ -3,7 +3,7 @@ id: 1
 title: "Getting started with a basic mathematical problem"
 date: 2026-04-14
 excerpt: "A simple discussion of a basic mathematical problem with rational numbers and irrational numbers"
-coverImage: "../photo/v2-f29ba50e4174c24d1eba49d4da99dad7_r.jpg"
+coverImage: "../photo/1432913-preview-mc-escher-wallpaper-collection-by-jannelli-volpi-cool-hunting.jpg"
 categories: ["Math"]
 tags: ["Rational Numbers", "Numbers", "Mathematics", "beginner"]
 ---

@@ -219,101 +219,22 @@ function postField(post, field, fallback) {
   return post[field] || fallback;
 }
 
-/**
- * Fetches a single post's Markdown file and parses it into
- * front-matter metadata and rendered HTML content.
- * Bilingual .md files use `<!-- cn -->` as the separator.
- *
- * @param {string} slug - The post slug (e.g. "1-getting-started-with-web-development")
- * @returns {Promise<object>} { meta: frontmatter object, html: rendered HTML string }
- */
-async function loadPostMarkdown(slug) {
-  const response = await fetch(`posts/${slug}.md`);
-  if (!response.ok) {
-    throw new Error(`Failed to load post: posts/${slug}.md`);
-  }
-  const raw = await response.text();
-  const { meta, body } = parseFrontmatter(raw);
+let postsContent = null;
 
-  // Split bilingual content if <!-- cn --> marker exists
-  let content = body;
-  if (body.includes("<!-- cn -->")) {
-    const parts = body.split("<!-- cn -->");
-    if (i18n.currentLang === "cn" && parts.length > 1) {
-      content = parts[1];
-    } else {
-      content = parts[0];
-    }
-  }
-
-  // Protect mermaid code blocks from Marked parser
-  const mermaidBlocks = [];
-  content = content.replace(/```mermaid\s*\n([\s\S]*?)```/g, (match, code) => {
-    const placeholder = `%%MERMAID_BLOCK_${mermaidBlocks.length}%%`;
-    mermaidBlocks.push(placeholder, code);
-    return placeholder;
-  });
-
-  // Protect math blocks ($$...$$ and $...$) from Marked parser
-  const mathBlocks = [];
-  content = content.replace(/\$\$([\s\S]*?)\$\$/g, (match, math) => {
-    const placeholder = `%%MATH_BLOCK_${mathBlocks.length}%%`;
-    mathBlocks.push({ placeholder, math, display: true });
-    return placeholder;
-  });
-  content = content.replace(/\$([^\$\n]+?)\$/g, (match, math) => {
-    const placeholder = `%%MATH_BLOCK_${mathBlocks.length}%%`;
-    mathBlocks.push({ placeholder, math, display: false });
-    return placeholder;
-  });
-
-  // Convert Markdown to HTML
-  let html = marked.parse(content);
-
-  // Restore mermaid blocks as <div class="mermaid">
-  for (let i = 0; i < mermaidBlocks.length; i += 2) {
-    const placeholder = mermaidBlocks[i];
-    const code = mermaidBlocks[i + 1];
-    const escaped = code
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-    html = html.replace(placeholder, `<div class="mermaid">${escaped}</div>`);
-  }
-
-  // Restore math blocks into the HTML
-  mathBlocks.forEach(({ placeholder, math, display }) => {
-    const rendered = katex.renderToString(math, {
-      displayMode: display,
-      throwOnError: false,
-    });
-    html = html.replace(placeholder, rendered);
-  });
-
-  return { meta, html };
+async function loadPostsContent() {
+  if (postsContent) return postsContent;
+  const resp = await fetch("data/posts_content.json");
+  if (!resp.ok) throw new Error("Failed to load posts_content.json");
+  postsContent = await resp.json();
+  return postsContent;
 }
 
-/**
- * Parses YAML-like frontmatter from the top of a Markdown file.
- */
-function parseFrontmatter(text) {
-  const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
-  if (!match) {
-    return { meta: {}, body: text };
-  }
-  const meta = {};
-  match[1].split("\n").forEach((line) => {
-    const colonIndex = line.indexOf(":");
-    if (colonIndex === -1) return;
-    const key = line.slice(0, colonIndex).trim();
-    let value = line.slice(colonIndex + 1).trim();
-    // Strip surrounding quotes
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    meta[key] = value;
-  });
-  return { meta, body: match[2] };
+async function loadPostMarkdown(slug) {
+  const content = await loadPostsContent();
+  const post = content[slug];
+  if (!post) throw new Error(`Post not found in posts_content.json: ${slug}`);
+  const html = i18n.currentLang === "cn" ? post.cn : post.en;
+  return { meta: {}, html };
 }
 
 // ============================================================

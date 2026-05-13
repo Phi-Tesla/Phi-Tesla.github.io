@@ -154,6 +154,23 @@ if (typeof marked !== "undefined") {
  * Apply syntax highlighting to all code blocks in a container
  * using highlight.js.
  */
+function addCopyButtons(container) {
+  container.querySelectorAll("pre").forEach((pre) => {
+    const btn = document.createElement("button");
+    btn.className = "copy-btn";
+    btn.textContent = "Copy";
+    btn.addEventListener("click", () => {
+      const code = pre.querySelector("code");
+      navigator.clipboard.writeText(code ? code.innerText : pre.innerText).then(() => {
+        btn.textContent = "Copied!";
+        setTimeout(() => (btn.textContent = "Copy"), 2000);
+      });
+    });
+    pre.style.position = "relative";
+    pre.appendChild(btn);
+  });
+}
+
 function applyHighlighting(container) {
   if (typeof hljs === "undefined") return;
   // Use highlightAll which processes all pre code blocks in the container
@@ -231,11 +248,21 @@ async function loadPostMarkdown(slug) {
     content = i18n.currentLang === "cn" && parts.length > 1 ? parts[1] : parts[0];
   }
 
-  const mermaidBlocks = [];
-  content = content.replace(/```mermaid\s*\n([\s\S]*?)```/g, (_, code) => {
-    const p = `%%MERMAID_${mermaidBlocks.length}%%`;
-    mermaidBlocks.push(code);
+  const codeBlocks = [];
+  content = content.replace(/```[\s\S]*?```/g, (block) => {
+    const p = `%%CODE_${codeBlocks.length}%%`;
+    codeBlocks.push(block);
     return p;
+  });
+
+  const mermaidBlocks = [];
+  codeBlocks.forEach((block, i) => {
+    if (block.startsWith("```mermaid")) {
+      const code = block.replace(/^```mermaid\s*\n/, "").replace(/```$/, "");
+      const p = `%%MERMAID_${mermaidBlocks.length}%%`;
+      mermaidBlocks.push(code);
+      codeBlocks[i] = p;
+    }
   });
 
   const mathBlocks = [];
@@ -248,6 +275,10 @@ async function loadPostMarkdown(slug) {
     const p = `%%MATH_${mathBlocks.length}%%`;
     mathBlocks.push({ math, display: false });
     return p;
+  });
+
+  codeBlocks.forEach((block, i) => {
+    content = content.replace(`%%CODE_${i}%%`, block);
   });
 
   let html = marked.parse(content);
@@ -400,6 +431,7 @@ async function renderArticle(posts) {
 
     // Post-process: Syntax highlighting
     applyHighlighting(container);
+    addCopyButtons(container);
 
     // Comments
     loadGiscus(id, title);

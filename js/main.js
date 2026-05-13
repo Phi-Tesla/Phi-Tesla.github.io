@@ -219,22 +219,66 @@ function postField(post, field, fallback) {
   return post[field] || fallback;
 }
 
-let postsContent = null;
+async function loadPostMarkdown(slug) {
+  const response = await fetch(`posts/${slug}.md`);
+  if (!response.ok) throw new Error(`Failed to load post: posts/${slug}.md`);
+  const raw = await response.text();
+  const { meta, body } = parseFrontmatter(raw);
 
-async function loadPostsContent() {
-  if (postsContent) return postsContent;
-  const resp = await fetch("data/posts_content.json");
-  if (!resp.ok) throw new Error("Failed to load posts_content.json");
-  postsContent = await resp.json();
-  return postsContent;
+  let content = body;
+  if (body.includes("<!-- cn -->")) {
+    const parts = body.split("<!-- cn -->");
+    content = i18n.currentLang === "cn" && parts.length > 1 ? parts[1] : parts[0];
+  }
+
+  const mermaidBlocks = [];
+  content = content.replace(/```mermaid\s*\n([\s\S]*?)```/g, (_, code) => {
+    const p = `%%MERMAID_${mermaidBlocks.length}%%`;
+    mermaidBlocks.push(code);
+    return p;
+  });
+
+  const mathBlocks = [];
+  content = content.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
+    const p = `%%MATH_${mathBlocks.length}%%`;
+    mathBlocks.push({ math, display: true });
+    return p;
+  });
+  content = content.replace(/\$([^\$\n]+?)\$/g, (_, math) => {
+    const p = `%%MATH_${mathBlocks.length}%%`;
+    mathBlocks.push({ math, display: false });
+    return p;
+  });
+
+  let html = marked.parse(content);
+
+  mermaidBlocks.forEach((code, i) => {
+    const escaped = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    html = html.replace(`%%MERMAID_${i}%%`, `<div class="mermaid">${escaped}</div>`);
+  });
+
+  mathBlocks.forEach(({ math, display }, i) => {
+    html = html.replace(`%%MATH_${i}%%`, katex.renderToString(math, { displayMode: display, throwOnError: false }));
+  });
+
+  return { meta, html };
 }
 
-async function loadPostMarkdown(slug) {
-  const content = await loadPostsContent();
-  const post = content[slug];
-  if (!post) throw new Error(`Post not found in posts_content.json: ${slug}`);
-  const html = i18n.currentLang === "cn" ? post.cn : post.en;
-  return { meta: {}, html };
+function parseFrontmatter(text) {
+  const match = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+  if (!match) return { meta: {}, body: text };
+  const meta = {};
+  match[1].split("\n").forEach((line) => {
+    const idx = line.indexOf(":");
+    if (idx === -1) return;
+    const key = line.slice(0, idx).trim();
+    let value = line.slice(idx + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    meta[key] = value;
+  });
+  return { meta, body: match[2] };
 }
 
 // ============================================================

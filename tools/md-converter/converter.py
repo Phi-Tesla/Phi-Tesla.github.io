@@ -27,90 +27,13 @@ def parse_frontmatter(text):
     return meta, match.group(2)
 
 
-def md_to_html(content):
-    """Minimal markdown→HTML: headings, bold, italic, code, paragraphs, links."""
-    lines = content.split('\n')
-    html_lines = []
-    in_code = False
-    code_buf = []
-    code_lang = ''
-    in_list = False
-
-    for line in lines:
-        # Fenced code block
-        if line.startswith('```'):
-            if not in_code:
-                in_code = True
-                code_lang = line[3:].strip()
-                code_buf = []
-            else:
-                in_code = False
-                code_text = '\n'.join(code_buf)
-                lang_class = f' class="language-{code_lang}"' if code_lang else ''
-                html_lines.append(f'<pre><code{lang_class}>{code_text}</code></pre>')
-                code_lang = ''
-            continue
-        if in_code:
-            code_buf.append(line)
-            continue
-
-        # Close list if needed
-        if in_list and not line.startswith('- ') and not line.startswith('* '):
-            html_lines.append('</ul>')
-            in_list = False
-
-        # Headings
-        m = re.match(r'^(#{1,6})\s+(.*)', line)
-        if m:
-            level = len(m.group(1))
-            html_lines.append(f'<h{level}>{inline(m.group(2))}</h{level}>')
-            continue
-
-        # Unordered list
-        m = re.match(r'^[-*]\s+(.*)', line)
-        if m:
-            if not in_list:
-                html_lines.append('<ul>')
-                in_list = True
-            html_lines.append(f'<li>{inline(m.group(1))}</li>')
-            continue
-
-        # Blank line → paragraph break
-        if line.strip() == '':
-            html_lines.append('')
-            continue
-
-        html_lines.append(f'<p>{inline(line)}</p>')
-
-    if in_list:
-        html_lines.append('</ul>')
-
-    return '\n'.join(html_lines)
-
-
-def inline(text):
-    # Bold
-    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
-    # Italic
-    text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
-    # Inline code
-    text = re.sub(r'`([^`]+)`', r'<code>\1</code>', text)
-    # Links
-    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', text)
-    return text
-
-
 def convert_md(md_text):
-    """Return {en: html, cn: html} preserving math/mermaid as-is."""
+    """Return {en: raw_markdown, cn: raw_markdown} — rendering happens in the browser."""
     _, body = parse_frontmatter(md_text)
-
     parts = body.split('<!-- cn -->')
-    en_body = parts[0]
-    cn_body = parts[1] if len(parts) > 1 else parts[0]
-
     return {
-        'en': md_to_html(en_body.strip()),
-        'cn': md_to_html(cn_body.strip()),
+        'en': parts[0].strip(),
+        'cn': parts[1].strip() if len(parts) > 1 else parts[0].strip(),
     }
 
 
